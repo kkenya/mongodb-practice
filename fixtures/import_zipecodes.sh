@@ -23,4 +23,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+## インポート後データベースに接続
+# mongosh localhost:27017/practice
+
 exit 0

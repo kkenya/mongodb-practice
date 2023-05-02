@@ -1,19 +1,6 @@
 # mongoパフォーマンス
 
-## index
-
-readとwriteどちらのパフォーマンスを優先するかのトレードイン
-
-read hevy write light
-read light write heavy
-
-インデックスを作成したドキュメントへのインサートはインデックスの再構築
-
-MongoDBのインデックスはRAMに読み込まれている必要がある。diskからの読み込みは避ける。
-
-todo
-
-## 計画(plan)の取得
+## クエリ計画(query plan)の取得
 
 MongoDBは次の3つのクエリ計画の取得方法を提供する
 
@@ -47,7 +34,7 @@ query optimizerによって選択された計画の詳細情報が書かれて�
 
 ## explain
 
-次のコマンド実行時のクエリ計画の情報を提供する。
+次のcursorを返すコマンド実行時にクエリ計画の情報を提供する。
 
 - aggregate
 - count
@@ -58,7 +45,7 @@ query optimizerによって選択された計画の詳細情報が書かれて�
 - mapReduce
 - update
 
-引数に指定したverbosity modeにより表示する情報を変えられる。
+引数に指定するverbosity modeにより表示する情報を変えられる。
 
 - allPlansExecution(デフォルト)
   - queryPlannerとexecutionStatsで考慮されたすべての計画を表示する
@@ -67,12 +54,122 @@ query optimizerによって選択された計画の詳細情報が書かれて�
 - executionStats
 
 ```shell
-practice> db.zipcodes.find({ _id: { $gte: '1000', $lte: '4000' } }).explain()
+practice> db.runCommand(
+  {
+     explain: {
+       find: "zipcodes",
+       filter: { _id: { $gte: '1000', $lte: '4000' } }
+     }
+  }
+)
+{
+  explainVersion: '1',
+  queryPlanner: { # query optimizerによって選択されたクエリ計画の詳細
+    namespace: 'practice.zipcodes', # <database>.<collection>
+    indexFilterSet: false,
+    parsedQuery: {
+      '$and': [ { _id: { '$lte': '4000' } }, { _id: { '$gte': '1000' } } ]
+    },
+    queryHash: 'B25BDAF5', # query shapeのハッシュ値
+    planCacheKey: 'AAB87497',
+    maxIndexedOrSolutionsReached: false,
+    maxIndexedAndSolutionsReached: false,
+    maxScansToExplodeReached: false,
+    winningPlan: { # query optimizerによって選択されたquery plan
+      stage: 'FETCH', # ドキュメントの取得
+      inputStage: { # 一つの子ステージ(複数の場合inputStages)
+        stage: 'IXSCAN', # インデックスの走査
+        keyPattern: { _id: 1 },
+        indexName: '_id_', # 利用されたインデックス名
+        isMultiKey: false,
+        multiKeyPaths: { _id: [] },
+        isUnique: true,
+        isSparse: false,
+        isPartial: false,
+        indexVersion: 2,
+        direction: 'forward',
+        indexBounds: { _id: [ '["1000", "4000"]' ] }
+      }
+    },
+    rejectedPlans: []
+  },
+  executionStats: { # winningPlanの実行結果
+    executionSuccess: true,
+    nReturned: 9027, # 条件に一致したドキュメント数
+    executionTimeMillis: 29, # クエリ計画の選択から実行までのms
+    totalKeysExamined: 9027, # 走査されたインデックス数
+    totalDocsExamined: 9027, # 操作されたドキュメントの総数
+    executionStages: {
+      stage: 'FETCH',
+      nReturned: 9027,
+      executionTimeMillisEstimate: 0,
+      works: 9028,
+      advanced: 9027,
+      needTime: 0,
+      needYield: 0,
+      saveState: 9,
+      restoreState: 9,
+      isEOF: 1,
+      docsExamined: 9027,
+      alreadyHasObj: 0,
+      inputStage: {
+        stage: 'IXSCAN',
+        nReturned: 9027,
+        executionTimeMillisEstimate: 0,
+        works: 9028,
+        advanced: 9027,
+        needTime: 0,
+        needYield: 0,
+        saveState: 9,
+        restoreState: 9,
+        isEOF: 1,
+        keyPattern: { _id: 1 },
+        indexName: '_id_',
+        isMultiKey: false,
+        multiKeyPaths: { _id: [] },
+        isUnique: true,
+        isSparse: false,
+        isPartial: false,
+        indexVersion: 2,
+        direction: 'forward',
+        indexBounds: { _id: [ '["1000", "4000"]' ] },
+        keysExamined: 9027,
+        seeks: 1,
+        dupsTested: 0,
+        dupsDropped: 0
+      }
+    },
+    allPlansExecution: []
+  },
+  command: {
+    find: 'zipcodes',
+    filter: { _id: { '$gte': '1000', '$lte': '4000' } },
+    '$db': 'practice'
+  },
+  serverInfo: {
+    host: 'CA-20020790',
+    port: 27017,
+    version: '6.0.5',
+    gitVersion: 'c9a99c120371d4d4c52cbb15dac34a36ce8d3b1d'
+  },
+  serverParameters: {
+    internalQueryFacetBufferSizeBytes: 104857600,
+    internalQueryFacetMaxOutputDocSizeBytes: 104857600,
+    internalLookupStageIntermediateDocumentMaxSizeBytes: 104857600,
+    internalDocumentSourceGroupMaxMemoryBytes: 104857600,
+    internalQueryMaxBlockingSortMemoryUsageBytes: 104857600,
+    internalQueryProhibitBlockingMergeOnMongoS: 0,
+    internalQueryMaxAddToSetBytes: 104857600,
+    internalDocumentSourceSetWindowFieldsMaxMemoryBytes: 104857600
+  },
+  ok: 1
+}
 ```
 
 ## explainのmongoshヘルパーメソッド
 
-mongoshは2つのヘルパーメソッドを提供する。
+todo databaseコマンドについて追記
+databaseコマンドに加えて、mongoshは2つのヘルパーメソッドを提供する。
 
 - [db.collection.explain()](https://www.mongodb.com/docs/manual/reference/method/db.collection.explain/#db.collection.explain--)
 - [cursor.explain()](https://www.mongodb.com/docs/manual/reference/method/cursor.explain/#cursor.explain--)
@@ -91,7 +188,7 @@ mongoshのヘルパーメソッドはデータベースコマンドと同等の�
 
 ### cursor.explain()
 
-次のコマンドが返すcursorから実行できる。
+cursorを返す次のコマンドから実行できる。
 
 - aggregate
 - count
@@ -101,7 +198,7 @@ mongoshのヘルパーメソッドはデータベースコマンドと同等の�
 - findAndModify
 - mapReduce
 
-この関数はcursorを返し、 実行結果を取得するには `.next()` かエイリアスの `.finish()` を呼び出す必要がある。mongoshのインタラクティブシェルで実行する場合は自動的に `.finish()` が呼び出される。
+`cursor.explain()` はcursorを返し、 実行結果を取得するには `.next()` かエイリアスの `.finish()` を呼び出す必要がある。mongoshのインタラクティブシェルで実行する場合は自動的に `.finish()` が呼び出される。
 
 ```shell
 # インデックスの取得
@@ -229,6 +326,28 @@ practice> db.zipcodes.countDocuments()
 29353
 ```
 
+## $indexStats
+
+ドキュメントのインデックスごとに統計を出力する。
+
+- aggregateの最初のステージでのみ利用できる
+- トランザクション中で利用できない
+
+```shell
+practice> db.zipcodes.getIndexes()
+[ { v: 2, key: { _id: 1 }, name: '_id_' } ]
+practice> db.zipcodes.aggregate( [ { $indexStats: { } } ] )
+[
+  {
+    name: '_id_',
+    key: { _id: 1 },
+    host: 'CA-20020790:27017',
+    accesses: { ops: Long("7"), since: ISODate("2023-04-30T00:31:21.481Z") },
+    spec: { v: 2, key: { _id: 1 }, name: '_id_' }
+  }
+]
+```
+
 ## カーディナリティ
 
 - [Analyze Query Performance](https://www.mongodb.com/docs/manual/tutorial/analyze-query-plan/)
@@ -236,6 +355,8 @@ practice> db.zipcodes.countDocuments()
   - macOSでのmongodbインストール・起動
 - [Explain Results](https://www.mongodb.com/docs/manual/reference/explain-results/)
   - explainの表示内容を説明
+- [Measure Index Use](https://www.mongodb.com/docs/manual/tutorial/measure-index-use/)
+  - aggregateでの $indexStats, $explainでのクエリ計画の取得、$hintでのインデックス矯正について
 - [Aggregation with the Zip Code Data Set](https://www.mongodb.com/docs/manual/tutorial/aggregation-zip-code-data-set/)
   - 住所データのフィクスチャを提供
 - [大規模サービスにおけるMongoDBのインデックス運用](https://blog.studysapuri.jp/entry/mongodb-index)
