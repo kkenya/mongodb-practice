@@ -8,30 +8,6 @@ MongoDBは次の3つのクエリ計画の取得方法を提供する
 - cursor.explain()
 - explainコマンド
 
-|stage|説明|
-|:--|:--|
-|COLLSCAN|コレクション全体の走査|
-|IXSCAN|選択されたindexを利用した走査|
-|FETCH for retrieving documents
-GROUP for grouping documents
-SHARD_MERGE for merging results from shards
-SHARDING_FILTER for filtering out orphan documents from shards
-
-COLLSCAN
-collection scan
-
-IXSCAN
-query plannerが選択したインデックスの情報が含まれる
-
-クエリの条件と返り値がインデックスのフィールドに含まれる `covered queries` の場合、 `FETCH` ステージの子のノードに含まれない
-
-todo
-クエリの実行結果を貼る
-
-queryPlanner
-
-query optimizerによって選択された計画の詳細情報が書かれている。
-
 ## explain
 
 次のcursorを返すコマンド実行時にクエリ計画の情報を提供する。
