@@ -1,0 +1,16 @@
+{
+  "devDependencies": {
+    "@faker-js/faker": "^7.6.0"
+  },
+  "name": "mongo-practice-2",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "kkenya",
+  "license": "ISC",
+  "description": "practice MongoDB"
+}
